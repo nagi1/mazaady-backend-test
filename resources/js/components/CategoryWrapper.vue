@@ -41,9 +41,9 @@
                     :id="`prop-${prop.id}`"
                     :placeholder="`Please Select ${prop.label}`"
                     @option:selected="
-                        (propData) => {
-                            updateSelectedProperties(propData, prop);
-                            updateProperties(propData, prop);
+                        (selectedOption) => {
+                            updateProperties(selectedOption, prop);
+                            updateSelectedProperties(selectedOption, prop);
                         }
                     "
                 />
@@ -73,6 +73,7 @@ export default {
         return {
             mainCategoriesWithSubCategories: [],
             properties: [],
+            propertiesMap: [],
 
             // Selected Values
             subCategory: null,
@@ -105,13 +106,48 @@ export default {
             },
             deep: true,
         },
+        properties: {
+            handler: function (newVal, oldVal) {
+                this.$emit("properties", this.getAllSelectedProperties);
+            },
+            deep: true,
+        },
     },
     computed: {
         getAllSelectedProperties() {
+            // merge selectedProperties with filteredProperties by id
+            const mappedProperties = this.properties
+                .filter((prop) => prop)
+                .map((prop) => {
+                    if (this.selectedProperties.hasOwnProperty(prop.id)) {
+                        return this.selectedProperties[prop.id];
+                    }
+                    return prop;
+                })
+                .map((prop) => {
+                    if (
+                        this.selectedProperties
+                            .filter((prop) => prop)
+                            .findIndex((p) => p.id === prop.id) !== -1
+                    ) {
+                        return {
+                            id: prop.id,
+                            key: this.propertiesMap[prop.id],
+                            value: prop.isOther ? prop.value : prop.name,
+                        };
+                    }
+
+                    return {
+                        id: prop.id,
+                        key: prop.name,
+                        value: null,
+                    };
+                });
+
             return {
                 mainCategory: this.mainCategory,
                 subCategory: this.subCategory,
-                properties: this.selectedProperties,
+                properties: mappedProperties,
             };
         },
     },
@@ -176,18 +212,39 @@ export default {
                 });
         },
 
-        updateSelectedProperties(propData, option) {
-            this.selectedProperties[option.id] = propData;
+        updateSelectedProperties(selectedOption, option) {
+            this.selectedProperties[option.id] = selectedOption;
+            this.propertiesMap[selectedOption.id] = option.label;
         },
 
-        updateProperties(propData, option) {
+        getPropertiesToRemove(option, childrenToRemove) {
+            const children = this.properties.filter((prop) => {
+                return prop.parent && prop.parent === option.id;
+            });
+            children.push(
+                ...this.selectedProperties.filter((prop) => {
+                    return prop.parent && prop.parent === option.id;
+                })
+            );
+
+            if (children.length === 0) {
+                return;
+            }
+
+            childrenToRemove.push(...children);
+
+            children.forEach((child) => {
+                return this.getPropertiesToRemove(child, childrenToRemove);
+            });
+        },
+
+        updateProperties(selectedOption, option) {
             /*
-            propData Example:
+            selectedOption Example:
             {
                 id: 55,
                 name: "BMW",
                 label: "BMW",
-                slug: "color-other",
                 parent: 2,
                 value: 55
                 child: true,
@@ -204,17 +261,40 @@ export default {
 
           1- check if the option has a child
           2- if it has a child, get the child properties
-          3- remove other child properties from the properties array
+          3- remove previous selected child properties from the properties array
           4- add the new child properties to the properties array after the index of the option
           5- update the selected properties
            */
 
-            if (propData.child) {
-                this.getChildProperties(propData.id).then((childProps) => {
-                    const index = this.properties.indexOf(option);
-                    this.properties.splice(index + 1, 1);
-                    this.properties.splice(index + 1, 0, ...childProps);
-                });
+            if (selectedOption.child) {
+                const previousSelectedValue =
+                    this.selectedProperties[option.id];
+
+                this.getChildProperties(selectedOption.id).then(
+                    (childProps) => {
+                        // get the children of the previousSelectedValue property
+                        if (previousSelectedValue) {
+                            /*
+                               1- get the children of the previousSelectedValue property
+                               2- get the children of the children of the previousSelectedValue property until there is no children
+                                 3- remove the children from the properties array
+                            */
+                            const childrenToRemove = [];
+
+                            this.getPropertiesToRemove(
+                                previousSelectedValue,
+                                childrenToRemove
+                            );
+                            // remove the childrenTree from the properties array
+                            this.properties = this.properties.filter(
+                                (prop) => !childrenToRemove.includes(prop)
+                            );
+                        }
+
+                        const index = this.properties.indexOf(option);
+                        this.properties.splice(index + 1, 0, ...childProps);
+                    }
+                );
             }
         },
 

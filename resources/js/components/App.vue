@@ -25,6 +25,51 @@
                     </div>
                 </div>
             </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">Results</div>
+
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Key</th>
+                                    <th scope="col">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <th scope="row">Main Category</th>
+                                    <td
+                                        v-text="
+                                            properties.mainCategory?.label ??
+                                            'Not Selected'
+                                        "
+                                    ></td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Sub Category</th>
+                                    <td
+                                        v-text="
+                                            properties.subCategory?.label ??
+                                            'Not Selected'
+                                        "
+                                    ></td>
+                                </tr>
+                                <tr
+                                    v-for="prop in properties.properties"
+                                    :key="prop.id"
+                                >
+                                    <th scope="row" v-text="prop.key"></th>
+                                    <td
+                                        v-text="prop.value ?? 'Not Selected'"
+                                    ></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </template>

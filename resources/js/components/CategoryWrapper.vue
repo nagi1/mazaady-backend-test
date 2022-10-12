@@ -125,6 +125,7 @@ export default {
                     return prop;
                 })
                 .map((prop) => {
+                    console.log(prop);
                     if (
                         this.selectedProperties
                             .filter((prop) => prop)
@@ -132,7 +133,9 @@ export default {
                     ) {
                         return {
                             id: prop.id,
-                            key: this.propertiesMap[prop.id],
+                            key: prop.isOther
+                                ? prop.originalName
+                                : this.propertiesMap[prop.id],
                             value: prop.isOther ? prop.value : prop.name,
                         };
                     }
@@ -163,8 +166,9 @@ export default {
                                 {
                                     // we can use these 2 values to get the other value for the property
                                     isOther: true,
+                                    originalName: prop.name,
                                     parent: prop.id,
-                                    id: null,
+                                    id: prop.id,
                                     name: "other",
                                     slug: `${prop.slug}-other`,
                                     child: false,
@@ -317,8 +321,11 @@ export default {
                             const options = [
                                 ...prop.options,
                                 {
-                                    id: null,
+                                    id: prop.id,
+                                    isOther: true,
                                     name: "other",
+                                    originalName: prop.name,
+                                    value: null,
                                     slug: `${prop.slug}-other`,
                                     parent: prop.id,
                                     child: false,

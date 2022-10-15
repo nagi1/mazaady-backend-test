@@ -125,7 +125,6 @@ export default {
                     return prop;
                 })
                 .map((prop) => {
-                    console.log(prop);
                     if (
                         this.selectedProperties
                             .filter((prop) => prop)
@@ -168,6 +167,7 @@ export default {
                                     isOther: true,
                                     originalName: prop.name,
                                     parent: prop.id,
+                                    value: null,
                                     id: prop.id,
                                     name: "other",
                                     slug: `${prop.slug}-other`,
@@ -222,6 +222,12 @@ export default {
         },
 
         getPropertiesToRemove(option, childrenToRemove) {
+            if (option.isOther) {
+                return childrenToRemove.filter(
+                    (child) => child.parent !== option.id
+                );
+            }
+
             const children = this.properties.filter((prop) => {
                 return prop.parent && prop.parent === option.id;
             });
@@ -270,31 +276,29 @@ export default {
           5- update the selected properties
            */
 
-            if (selectedOption.child) {
-                const previousSelectedValue =
-                    this.selectedProperties[option.id];
+            const previousSelectedValue = this.selectedProperties[option.id];
 
-                this.getChildProperties(selectedOption.id).then(
-                    (childProps) => {
-                        // get the children of the previousSelectedValue property
-                        if (previousSelectedValue) {
-                            /*
+            // get the children of the previousSelectedValue property
+            if (previousSelectedValue && !previousSelectedValue.isOther) {
+                /*
                                1- get the children of the previousSelectedValue property
                                2- get the children of the children of the previousSelectedValue property until there is no children
                                  3- remove the children from the properties array
                             */
-                            const childrenToRemove = [];
+                const childrenToRemove = [];
+                this.getPropertiesToRemove(
+                    previousSelectedValue,
+                    childrenToRemove
+                );
+                // remove the childrenTree from the properties array
+                this.properties = this.properties.filter(
+                    (prop) => !childrenToRemove.includes(prop)
+                );
+            }
 
-                            this.getPropertiesToRemove(
-                                previousSelectedValue,
-                                childrenToRemove
-                            );
-                            // remove the childrenTree from the properties array
-                            this.properties = this.properties.filter(
-                                (prop) => !childrenToRemove.includes(prop)
-                            );
-                        }
-
+            if (selectedOption.child) {
+                this.getChildProperties(selectedOption.id).then(
+                    (childProps) => {
                         const index = this.properties.indexOf(option);
                         this.properties.splice(index + 1, 0, ...childProps);
                     }
